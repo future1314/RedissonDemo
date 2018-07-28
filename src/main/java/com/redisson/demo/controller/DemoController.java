@@ -21,7 +21,7 @@ public class DemoController {
     private static Logger logger = LoggerFactory.getLogger(DemoController.class);
 
     @Autowired
-    private RedisTemplate<String, String> redisTemplate;
+    private RedisTemplate<String, String> redisTemplate;////Integer ???不可以吗
     @Autowired
     private RedissonClient redissonClient;
 
@@ -86,5 +86,31 @@ public class DemoController {
         }
 
         return "lock-" + Thread.currentThread().getName() + "[" + serverId +"]";
+    }
+
+    @ResponseBody
+    @RequestMapping("/lockfor")
+    public String lockThread() {
+        //int serverId = 2;
+        //redisTemplate.opsForValue().set("COUNTER","0");
+        for (int serverId = 0; serverId <10 ; serverId++) {
+            new Thread(()->{
+                RLock lock = redissonClient.getLock("TEST");
+                try {
+                    lock.lock();
+                    logger.error("Request Thread - " + Thread.currentThread().getName() + "[........] locked and begun...");
+                    Thread.sleep(15000); // 15 sec
+                    logger.error("Request Thread - " + Thread.currentThread().getName() + "[........] ended successfully...");
+                } catch (Exception ex) {
+                    logger.error("-----Error occurred");
+                } finally {
+                    lock.unlock();
+                    logger.error("Request Thread - " + Thread.currentThread().getName() + "[........] unlocked---");
+                }
+                Long counter = redisTemplate.opsForValue().increment("COUNTER-", 1);
+                logger.error("Request Thread - " + Thread.currentThread().getName() + "[... "+counter+" ....] <<<>>>>---");
+            }).start();
+        }
+        return "locked....";// + Thread.currentThread().getName() + "[" + serverId +"]";
     }
 }
